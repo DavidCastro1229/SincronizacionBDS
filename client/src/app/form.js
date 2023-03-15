@@ -1,6 +1,6 @@
 import React from 'react'
 import Axios from "axios";
-import { Input, Grid, Text, Button, Spacer } from '@nextui-org/react'
+import { Input, Grid, Text, Button, Spacer, Table, Checkbox, Container } from '@nextui-org/react'
 export default function Form() {
     const [BD1, setBD1] = React.useState({
         host: undefined,
@@ -18,11 +18,10 @@ export default function Form() {
     })
     const [estado, setEstado] = React.useState({
         BD1: null,
-        data1: null,
+        tablas: null,
         BD2: null,
-        data2: null
     })
-    const [tabla, setTabla] = React.useState('')
+    const [tablas, setTablas] = React.useState([])
     const CBD1 = (e) => {
         const name = e.target.name;
         setBD1({ ...BD1, [name]: e.target.value })
@@ -41,24 +40,28 @@ export default function Form() {
     const Conect = async (origin) => {
         if (origin === 1) {
             const res = await Axios.post('http://localhost:4000/conectarbd?origin=1', { BDS: BD1 });
-            const data = res.data.data;
+            const data = res.data.tablasBd;
             if (res.data.access === false) {
+
                 setEstado({ ...estado, BD1: false });
                 return alert(res.data.mensaje)
 
             }
-            return setEstado({ ...estado, BD1: true, data1: data });
+            console.log(data)
+            let t = []
+            for (let valor of data) {
+                t.push(valor.table_name)
+            }
+            return setEstado({ ...estado, tablas: t, BD1: true });
         }
         if (origin === 2) {
             const res = await Axios.post('http://localhost:4000/conectarbd?origin=2', { BDS: BD2 });
             console.log(res.data)
-            const data = res.data.data;
             if (res.data.access === false) {
                 setEstado({ ...estado, BD2: false });
                 return alert(res.data.mensaje);
             }
-            console.log(data)
-            return setEstado({ ...estado, BD2: true, data2: data })
+            return setEstado({ ...estado, BD2: true })
         }
     }
     const Extencion = async () => {
@@ -68,12 +71,25 @@ export default function Form() {
         alert(res.data.mensaje)
     }
     const Sincronizar = async () => {
-        const res = await Axios.post('http://localhost:4000/sincronizar', { BD1, BD2, tabla });
+        const res = await Axios.post('http://localhost:4000/sincronizar', { BD1, BD2, tablas });
         console.log(res.data)
         if (res.data.access === false) return alert(res.data.mensaje)
         alert(res.data.mensaje)
     }
-
+    const seleccionarTablas = (e) => {
+        if(e === 'all'){ 
+            if(selected){
+                setSelected(false);
+                return setTablas([])
+            }           
+            setSelected(true);
+            return setTablas(estado.tablas)
+        }
+        setSelected(false);
+        setTablas(e)
+    
+    }
+    const [selected, setSelected] = React.useState(false)
     return (
         <>
             <Grid.Container css={{ height: "50vh", width: "100vw" }}>
@@ -137,18 +153,30 @@ export default function Form() {
                     <Button flat color={estado.BD1 === false ? 'error' : estado.BD1 === true ? 'success' : 'primary'}
                         onPress={() => Conect(1)}>{estado.BD1 === false ? 'Conexion fallida' : estado.BD1 === true ? 'Conectado' : 'Conectar'}</Button>
                 </Grid>
-                <Grid justify='center' xs={12} sm={12} md={12} lg={12} xl={12}>
-                    <Input
-                        name="tabla"
-                        clearable
-                        size="xl"
-                        onChange={(e) => setTabla(e.target.value)}
-                        type="text"
-                        aria-label="tabla"
-                        labelLeft="Tabla"
-                    />
-                </Grid>
             </Grid.Container>
+
+            {
+                estado.BD1 === true ?
+                    <Container fluid css={{ height: "30vh", overflow: "auto" }}>
+                        <Checkbox value="all" isSelected={selected} color="primary" onChange={()=>seleccionarTablas('all')}>Seleccionar todas</Checkbox>
+                        <Checkbox.Group
+                            color="success"
+                            label="Selecionar tablas"
+                            value={tablas}
+                            css={{ padding: "$1" }}
+                            onChange={seleccionarTablas}
+                        >
+                            {
+                                estado.tablas.map((t) => {
+                                    return (
+                                        <Checkbox value={t}>{t}</Checkbox>
+                                    )
+                                })
+                            }
+                        </Checkbox.Group>
+                    </Container>
+                    : ""
+            }
 
             <Grid.Container css={{ height: "50vh", width: "100vw" }}>
 
