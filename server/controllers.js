@@ -6,14 +6,30 @@ const Conectar = async (req, res) => {
   console.log(req.body)
   try {
     const DataBase = new BD(BDS.host, BDS.user, BDS.bd, BDS.port, BDS.password);
-    console.log(DataBase);
-    return res.json({ access: true})
+    if (origin == 1) {
+      const tablas = await DataBase.conection.query(`
+      SELECT table_name
+  FROM information_schema.tables
+  WHERE table_schema='public'
+  AND table_type='BASE TABLE';
+      `)
+      console.log(tablas.rows);
+      return res.json({ access: true, tablasBd: tablas.rows })
+    }
+    await DataBase.conection.query(`
+      SELECT table_name
+  FROM information_schema.tables
+  WHERE table_schema='public'
+  AND table_type='BASE TABLE';
+      `)
+    return res.json({ access: true })
 
   } catch (error) {
     console.log(error.message)
     return res.json({ access: false, mensaje: error.message })
   }
 }
+
 const crearExtencion = async (req, res) => {
   try {
     const { BDS } = req.body;
@@ -26,19 +42,24 @@ const crearExtencion = async (req, res) => {
     res.json({ access: false, mensaje: error.message })
   }
 }
+
 const Sincronizar = async (req, res) => {
   try {
-    const { BD1, BD2, tabla } = req.body;
+    const { BD1, BD2, tablas } = req.body;
     this.DataBaseUno = new BD(BD1.host, BD1.user, BD1.bd, BD1.port, BD1.password);
     this.DataBaseDos = new BD(BD2.host, BD2.user, BD2.bd, BD2.port, BD2.password);
-    const response = await this.DataBaseUno.conection.query(`
+
+
+    for (let name of tablas) {
+
+      const response = await this.DataBaseUno.conection.query(`
     SELECT DISTINCT 
     a.attnum as no,
     a.attname as nombre_columna,
     format_type(a.atttypid, a.atttypmod) as tipo,
     a.attnotnull as notnull, 
     com.description as descripcion,
-    coalesce(i.indisprimary,false) as llave_primaria,
+    coalesce(i.indisprimary, false) as llave_primaria,
     def.adsrc as default
 FROM pg_attribute a 
 JOIN pg_class pgc ON pgc.oid = a.attrelid
@@ -51,47 +72,59 @@ LEFT JOIN pg_attrdef def ON
 WHERE a.attnum > 0 AND pgc.oid = a.attrelid
 AND pg_table_is_visible(pgc.oid)
 AND NOT a.attisdropped
- AND pgc.relname = '${tabla}'  -- Nombre de la tabla
+ AND pgc.relname = '${name}'  -- Nombre de la tabla
 ORDER BY a.attnum;
     `);
-    console.log(response.rows)
-    const datos = []
-    response.rows.forEach((data) => {
-      datos.push(`${data.nombre_columna} ${data.tipo}`)
-    })
-    console.log(datos.toString())
-    const columns = datos.toString();
-    const response2 = await this.DataBaseDos.conection.query(`
+      console.log(response.rows)
+      console.log('pasa')
+      const datos = []
+      response.rows.forEach((data) => {
+        datos.push(`${data.nombre_columna} ${data.tipo}`)
+      })
+      console.log('pasa')
+      console.log(datos.toString())
+      const columns = datos.toString();
+      console.log('pasa')
+
+      const response2 = await this.DataBaseDos.conection.query(`
       select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-      'select * from ${tabla}')					 
-as ${tabla}(${columns})
+      'select * from public.${name}')					 
+      as ${name}copy(${columns})
     `);
+      console.log('pasa')
 
-    console.log(response2.rows)
+      console.log(response2.rows)
 
-    const response3 = await this.DataBaseDos.conection.query(`
+      const response3 = await this.DataBaseDos.conection.query(`
     SELECT table_name FROM information_schema.columns 
-    WHERE table_name='${tabla}' 
+    WHERE table_name = '${name}copy' 
 `);
-    if (response3.rowCount === 0) {
-      const response = await this.DataBaseDos.conection.query(`
-  CREATE TABLE ${tabla}
+      console.log(response3)
+      console.log('pasa')
+      if (response3.rowCount === 0) {
+        console.log('la tabla no exise entonces se crea')
+        const response = await this.DataBaseDos.conection.query(`
+  CREATE TABLE ${name}copy
   AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-  'select * from ${tabla}')					 
-  as ${tabla}(${columns})     
+  'select * from public.${name}')					 
+  as ${name}copy (${columns})     
   `);
-      console.log(response)
-      return res.json({ access: true, mensaje: "Sincronizacion exitosa" })
-    }
-    const response4 = await this.DataBaseDos.conection.query(`
-    drop table ${tabla};
-    CREATE TABLE ${tabla}
+        console.log('pasa')
+        console.log(response)
+      } else {
+        console.log('la tabla si existe se actualiza')
+        const response4 = await this.DataBaseDos.conection.query(`
+    drop table ${name}copy;
+    CREATE TABLE ${name}copy
     AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-      'select * from ${tabla}')					 
-as ${tabla}(${columns})
+      'select * from public.${name}')					 
+as ${name}copy(${columns})
 
 `);
-    console.log(response4)
+        console.log(response4)
+      }
+    }
+    console.log('termina')
     return res.json({ access: true, mensaje: "Sincronizacion exitosa" })
   } catch (error) {
 
