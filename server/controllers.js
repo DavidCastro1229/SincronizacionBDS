@@ -49,9 +49,8 @@ const Sincronizar = async (req, res) => {
     this.DataBaseUno = new BD(BD1.host, BD1.user, BD1.bd, BD1.port, BD1.password);
     this.DataBaseDos = new BD(BD2.host, BD2.user, BD2.bd, BD2.port, BD2.password);
 
-    console.log('inicia')
     for (let name of tablas) {
-      console.log(name)
+      console.log('inicia la tabla', name)
       const infoTabla = await this.DataBaseUno.conection.query(`
     SELECT DISTINCT 
     a.attnum as no,
@@ -74,7 +73,8 @@ AND NOT a.attisdropped
  AND pgc.relname = '${name}'  -- Nombre de la tabla
 ORDER BY a.attnum;
     `);
-      console.log('pasa infoTabla')
+      // console.log('pasa infoTabla')
+      // console.log(infoTabla.rows)
 
       const datos = []
       if(infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna){
@@ -84,14 +84,14 @@ ORDER BY a.attnum;
         datos.push(`${data.nombre_columna} ${data.tipo}`)
       })
       const columns = datos.toString();
-      console.log(columns)
-      console.log('se crea la columna en cadena')
+      // console.log(columns)
+      // console.log('se crea la columna en cadena')
 
       const validarExistencia = await this.DataBaseDos.conection.query(`
     SELECT table_name FROM information_schema.columns 
     WHERE table_name = '${name}' 
 `);
-      console.log('pasa validar existencia')
+      // console.log('pasa validar existencia')
       if (validarExistencia.rowCount === 0) {
         console.log('la tabla no exise entonces se crea')
         await this.DataBaseDos.conection.query(`
