@@ -49,18 +49,17 @@ const Sincronizar = async (req, res) => {
     this.DataBaseUno = new BD(BD1.host, BD1.user, BD1.bd, BD1.port, BD1.password);
     this.DataBaseDos = new BD(BD2.host, BD2.user, BD2.bd, BD2.port, BD2.password);
 
-
+    console.log('inicia')
     for (let name of tablas) {
-
-      const response = await this.DataBaseUno.conection.query(`
+      console.log(name)
+      const infoTabla = await this.DataBaseUno.conection.query(`
     SELECT DISTINCT 
     a.attnum as no,
     a.attname as nombre_columna,
     format_type(a.atttypid, a.atttypmod) as tipo,
     a.attnotnull as notnull, 
     com.description as descripcion,
-    coalesce(i.indisprimary, false) as llave_primaria,
-    def.adsrc as default
+    coalesce(i.indisprimary, false) as llave_primaria
 FROM pg_attribute a 
 JOIN pg_class pgc ON pgc.oid = a.attrelid
 LEFT JOIN pg_index i ON 
@@ -75,53 +74,44 @@ AND NOT a.attisdropped
  AND pgc.relname = '${name}'  -- Nombre de la tabla
 ORDER BY a.attnum;
     `);
-      console.log(response.rows)
-      console.log('pasa')
+      console.log('pasa infoTabla')
+
       const datos = []
-      response.rows.forEach((data) => {
+      if(infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna){
+        infoTabla.rows.shift()
+      }
+      infoTabla.rows.forEach((data) => {
         datos.push(`${data.nombre_columna} ${data.tipo}`)
       })
-      console.log('pasa')
-      console.log(datos.toString())
       const columns = datos.toString();
-      console.log('pasa')
+      console.log(columns)
+      console.log('se crea la columna en cadena')
 
-      const response2 = await this.DataBaseDos.conection.query(`
-      select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-      'select * from public.${name}')					 
-      as ${name}copy(${columns})
-    `);
-      console.log('pasa')
-
-      console.log(response2.rows)
-
-      const response3 = await this.DataBaseDos.conection.query(`
+      const validarExistencia = await this.DataBaseDos.conection.query(`
     SELECT table_name FROM information_schema.columns 
-    WHERE table_name = '${name}copy' 
+    WHERE table_name = '${name}' 
 `);
-      console.log(response3)
-      console.log('pasa')
-      if (response3.rowCount === 0) {
+      console.log('pasa validar existencia')
+      if (validarExistencia.rowCount === 0) {
         console.log('la tabla no exise entonces se crea')
-        const response = await this.DataBaseDos.conection.query(`
-  CREATE TABLE ${name}copy
+        await this.DataBaseDos.conection.query(`
+  CREATE TABLE "${name}"
   AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-  'select * from public.${name}')					 
-  as ${name}copy (${columns})     
+  'select * from "${name}"')					 
+  as "${name}" (${columns})     
   `);
-        console.log('pasa')
-        console.log(response)
+        console.log('Exitoso tabla', name)
       } else {
         console.log('la tabla si existe se actualiza')
-        const response4 = await this.DataBaseDos.conection.query(`
-    drop table ${name}copy;
-    CREATE TABLE ${name}copy
-    AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-      'select * from public.${name}')					 
-as ${name}copy(${columns})
-
-`);
-        console.log(response4)
+        await this.DataBaseDos.conection.query(`
+        drop table "${name}";
+        CREATE TABLE "${name}"
+        AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
+        'select * from "${name}"')					 
+        as "${name}" (${columns})
+        
+        `);
+        console.log('Exitoso tabla', name)
       }
     }
     console.log('termina')
