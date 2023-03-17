@@ -1,3 +1,4 @@
+const { Connection } = require('pg');
 const BD = require('./database');
 
 const Conectar = async (req, res) => {
@@ -49,72 +50,72 @@ const Sincronizar = async (req, res) => {
     this.DataBaseUno = new BD(BD1.host, BD1.user, BD1.bd, BD1.port, BD1.password);
     this.DataBaseDos = new BD(BD2.host, BD2.user, BD2.bd, BD2.port, BD2.password);
 
-    for (let name of tablas) {
-      console.log('inicia la tabla', name)
-      const infoTabla = await this.DataBaseUno.conection.query(`
-    SELECT DISTINCT 
-    a.attnum as no,
-    a.attname as nombre_columna,
-    format_type(a.atttypid, a.atttypmod) as tipo,
-    a.attnotnull as notnull, 
-    com.description as descripcion,
-    coalesce(i.indisprimary, false) as llave_primaria
-FROM pg_attribute a 
-JOIN pg_class pgc ON pgc.oid = a.attrelid
-LEFT JOIN pg_index i ON 
-    (pgc.oid = i.indrelid AND i.indkey[0] = a.attnum)
-LEFT JOIN pg_description com on 
-    (pgc.oid = com.objoid AND a.attnum = com.objsubid)
-LEFT JOIN pg_attrdef def ON 
-    (a.attrelid = def.adrelid AND a.attnum = def.adnum)
-WHERE a.attnum > 0 AND pgc.oid = a.attrelid
-AND pg_table_is_visible(pgc.oid)
-AND NOT a.attisdropped
- AND pgc.relname = '${name}'  -- Nombre de la tabla
-ORDER BY a.attnum;
+    let llavesForaneas = []
+    const Llaves = await this.DataBaseUno.conection.query(`
+    SELECT
+    (SELECT relname FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+     WHERE c.oid=r.conrelid) as nombre_tabla
+    ,conname as nombre_llave,pg_catalog.pg_get_constraintdef(oid, true) as relacion_tipo_llave
+    FROM pg_catalog.pg_constraint r
+    WHERE r.conrelid in
+    (SELECT c.oid FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname !~ 'pg_' and c.relkind = 'r'  AND pg_catalog.pg_table_is_visible(c.oid))
+     AND r.contype = 'f';
     `);
-      // console.log('pasa infoTabla')
-      // console.log(infoTabla.rows)
-
-      const datos = []
-      if(infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna){
-        infoTabla.rows.shift()
-      }
-      infoTabla.rows.forEach((data) => {
-        datos.push(`${data.nombre_columna} ${data.tipo}`)
-      })
-      const columns = datos.toString();
-      // console.log(columns)
-      // console.log('se crea la columna en cadena')
-
-      const validarExistencia = await this.DataBaseDos.conection.query(`
-    SELECT table_name FROM information_schema.columns 
-    WHERE table_name = '${name}' 
-`);
-      // console.log('pasa validar existencia')
-      if (validarExistencia.rowCount === 0) {
-        console.log('la tabla no exise entonces se crea')
-        await this.DataBaseDos.conection.query(`
-  CREATE TABLE "${name}"
-  AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-  'select * from "${name}"')					 
-  as "${name}" (${columns})     
-  `);
-        console.log('Exitoso tabla', name)
-      } else {
-        console.log('la tabla si existe se actualiza')
-        await this.DataBaseDos.conection.query(`
-        drop table "${name}";
-        CREATE TABLE "${name}"
-        AS select * from dblink('dbname=${BD1.bd} user=${BD1.user} password=${BD1.password}',
-        'select * from "${name}"')					 
-        as "${name}" (${columns})
-        
-        `);
-        console.log('Exitoso tabla', name)
+    for (let name of tablas) {
+      for (let valor of Llaves.rows) {
+        if (name === valor.nombre_tabla) {
+          llavesForaneas.push({
+            tabla: valor.nombre_tabla,
+            llave: valor.nombre_llave,
+            relacion: valor.relacion_tipo_llave
+          });
+        }
       }
     }
-    console.log('termina')
+    console.log(llavesForaneas)
+
+    // return res.json({ access: true, mensaje: "Sincronizacion exitosa" })
+
+
+
+    const Existencia = await this.DataBaseDos.tablasExistentes(tablas, tablas.length);
+    console.log(Existencia)
+
+
+
+
+    if (Existencia.noExistentes.length > 0) {
+      const crear = await this.DataBaseDos.crearTabla(Existencia.noExistentes, Existencia.noExistentes.length,
+        this.DataBaseUno, BD1.bd, BD1.user, BD1.password);
+      console.log(crear);
+      const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(tablas, this.DataBaseUno);
+      console.log(agregarPrimaryKey)
+
+      const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, Llaves.rows, llavesForaneas.length);
+      console.log(agregarForaneas)
+    }
+    // if (Existencia.existentes) {
+    //   const eliminarForaneas = await this.DataBaseDos.eliminarForaneas(tablas, Llaves.rows, llavesForaneas.length)
+    //   console.log("eliminar foraneas", eliminarForaneas)
+
+    //   const actualizar = await this.DataBaseDos.actualizarTabla(Existencia.existentes, Existencia.existentes.length,
+    //     this.DataBaseUno, BD1.bd, BD1.user, BD1.password);
+    //   console.log(actualizar);
+
+    //   const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(tablas, this.DataBaseUno);
+    //   console.log(agregarPrimaryKey)
+
+    //   const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, Llaves.rows, llavesForaneas.length);
+    //   console.log(agregarForaneas)
+
+
+    // }
+
+
+
     return res.json({ access: true, mensaje: "Sincronizacion exitosa" })
   } catch (error) {
 
