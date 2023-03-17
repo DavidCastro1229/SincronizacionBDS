@@ -52,25 +52,42 @@ const Sincronizar = async (req, res) => {
 
     let llavesForaneas = []
     const Llaves = await this.DataBaseUno.conection.query(`
-    SELECT
-    (SELECT relname FROM pg_catalog.pg_class c
-    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-     WHERE c.oid=r.conrelid) as nombre_tabla
-    ,conname as nombre_llave,pg_catalog.pg_get_constraintdef(oid, true) as relacion_tipo_llave
-    FROM pg_catalog.pg_constraint r
-    WHERE r.conrelid in
-    (SELECT c.oid FROM pg_catalog.pg_class c
-    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    WHERE c.relname !~ 'pg_' and c.relkind = 'r'  AND pg_catalog.pg_table_is_visible(c.oid))
-     AND r.contype = 'f';
+    SELECT tc.table_name,
+    tc.constraint_name,
+     tc.constraint_type,
+     kcu.column_name,
+     tc.is_deferrable,
+     tc.initially_deferred,
+     rc.match_option AS match_type,
+     rc.update_rule AS on_update,
+     rc.delete_rule AS on_delete,
+     ccu.table_name AS references_table,
+     ccu.column_name AS references_field
+     FROM information_schema.table_constraints tc
+     LEFT JOIN information_schema.key_column_usage kcu
+     ON tc.constraint_catalog = kcu.constraint_catalog
+     AND tc.constraint_schema = kcu.constraint_schema
+     AND tc.constraint_name = kcu.constraint_name
+     LEFT JOIN information_schema.referential_constraints rc
+     ON tc.constraint_catalog = rc.constraint_catalog
+     AND tc.constraint_schema = rc.constraint_schema
+     AND tc.constraint_name = rc.constraint_name
+     LEFT JOIN information_schema.constraint_column_usage ccu
+     ON rc.unique_constraint_catalog = ccu.constraint_catalog
+    AND rc.unique_constraint_schema = ccu.constraint_schema
+     AND rc.unique_constraint_name = ccu.constraint_name
+     WHERE lower(tc.constraint_type) in ('foreign key', 'primary key')
+     ORDER BY tc.table_name
     `);
     for (let name of tablas) {
       for (let valor of Llaves.rows) {
-        if (name === valor.nombre_tabla) {
+        if (name === valor.table_name && valor.constraint_type == 'FOREIGN KEY') {
           llavesForaneas.push({
-            tabla: valor.nombre_tabla,
-            llave: valor.nombre_llave,
-            relacion: valor.relacion_tipo_llave
+            tabla: valor.table_name,
+            llave: valor.constraint_name,
+            nombre_columna:valor.column_name, 
+            referencia_table: valor.references_table,
+            referencia_columna:valor.references_field
           });
         }
       }
@@ -82,8 +99,8 @@ const Sincronizar = async (req, res) => {
 
 
     const Existencia = await this.DataBaseDos.tablasExistentes(tablas, tablas.length);
-    console.log(Existencia)
-
+    console.log(`Hay ${Existencia.existentes.length} tablas existentes`)
+    console.log(`Hay ${Existencia.noExistentes.length} tablas no existentes`)
 
 
 
@@ -93,8 +110,7 @@ const Sincronizar = async (req, res) => {
       console.log(crear);
       const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(tablas, this.DataBaseUno);
       console.log(agregarPrimaryKey)
-
-      const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, Llaves.rows, llavesForaneas.length);
+      const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, llavesForaneas, llavesForaneas.length);
       console.log(agregarForaneas)
     }
     // if (Existencia.existentes) {

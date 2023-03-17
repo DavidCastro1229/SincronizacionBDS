@@ -148,17 +148,16 @@ console.log(long)
 
         for(let name of tablas ){
             for (let e of llaves) {
-                if (name === e.nombre_tabla) {
+                if (name === e.tabla) {
                     long = long + 1;
                     console.log(long)
-                    console.log(e.relacion_tipo_llave)
-                    console.log('se agrega ', name, ' == ', e.nombre_tabla)
+                    console.log(e.tabla)
                     await this.conection.query(`
                   ALTER TABLE "${name}" 
-             ADD CONSTRAINT ${e.nombre_llave.replace('"', "")} 
-             ${e.relacion_tipo_llave}
+             ADD CONSTRAINT ${e.llave} 
+             FOREIGN KEY (${e.nombre_columna}) REFERENCES "${e.referencia_table}"(${e.referencia_columna})
                   `)
-                    console.log('exito agregar foranea tabla,', name)
+                    console.log('Exito, foranea agregada a la tabla ,', name)
                 }
             }
         }
