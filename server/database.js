@@ -165,14 +165,13 @@ console.log(long)
     }
     async eliminarForaneas(tablas, llaves, logitud) {
         let long = 0;
-        console.log(logitud)
         for(let name of tablas){
         for (let e of llaves) {
-            if (name === e.nombre_tabla) {
+            if (name === e.tabla) {
                 long = long + 1;
                 console.log(long)
                 await this.conection.query(`
-        ALTER TABLE "${name}" DROP CONSTRAINT ${e.nombre_llave};
+        ALTER TABLE "${name}" DROP CONSTRAINT ${e.llave};
               `)
                 console.log('se elimino foranea de la tabla', name)
             }
@@ -180,6 +179,7 @@ console.log(long)
     }
         if (long === logitud) return true
     }
+
     async agregarPrimaryKey(tablas,conexionBD1) {
         let long = 0;
       

@@ -113,22 +113,23 @@ const Sincronizar = async (req, res) => {
       const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, llavesForaneas, llavesForaneas.length);
       console.log(agregarForaneas)
     }
-    // if (Existencia.existentes) {
-    //   const eliminarForaneas = await this.DataBaseDos.eliminarForaneas(tablas, Llaves.rows, llavesForaneas.length)
-    //   console.log("eliminar foraneas", eliminarForaneas)
+    if (Existencia.existentes.length > 0) {
 
-    //   const actualizar = await this.DataBaseDos.actualizarTabla(Existencia.existentes, Existencia.existentes.length,
-    //     this.DataBaseUno, BD1.bd, BD1.user, BD1.password);
-    //   console.log(actualizar);
+      const eliminarForaneas = await this.DataBaseDos.eliminarForaneas(tablas, llavesForaneas, llavesForaneas.length)
+      console.log("eliminar foraneas", eliminarForaneas)
 
-    //   const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(tablas, this.DataBaseUno);
-    //   console.log(agregarPrimaryKey)
+      const actualizar = await this.DataBaseDos.actualizarTabla(Existencia.existentes, Existencia.existentes.length,
+        this.DataBaseUno, BD1.bd, BD1.user, BD1.password);
+      console.log(actualizar);
 
-    //   const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, Llaves.rows, llavesForaneas.length);
-    //   console.log(agregarForaneas)
+      const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(tablas, this.DataBaseUno);
+      console.log(agregarPrimaryKey)
+
+      const agregarForaneas = await this.DataBaseDos.agregarForanea(tablas, llavesForaneas, llavesForaneas.length);
+      console.log(agregarForaneas)
 
 
-    // }
+    }
 
 
 
