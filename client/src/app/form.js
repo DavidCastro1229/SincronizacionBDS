@@ -18,10 +18,12 @@ export default function Form() {
     })
     const [estado, setEstado] = React.useState({
         BD1: null,
-        tablas: null,
+        existentes: null,
+        noExistentes: null,
         BD2: null,
     })
     const [tablas, setTablas] = React.useState([])
+    const [verTablasEstado, setVerTablas] = React.useState(false)
     const CBD1 = (e) => {
         const name = e.target.name;
         setBD1({ ...BD1, [name]: e.target.value })
@@ -37,6 +39,20 @@ export default function Form() {
     React.useEffect(() => {
         setEstado({ ...estado, BD2: null })
     }, [BD2])
+    React.useEffect(() => {
+        if(estado.BD1 === true && estado.BD2 === true){
+            verTablas()
+        }
+    }, [estado.BD1, estado.BD2])
+
+    async function verTablas(){
+        const res = await Axios.post('http://localhost:4000/verTablas', { BD1, BD2 });
+        console.log(res.data)
+        if (res.data.access === false) return alert(res.data.mensaje)
+        console.log(res.data.table.existentes);
+        setEstado({ ...estado, existentes: res.data.table.existentes, noExistentes: res.data.table.noExistentes });
+        return setVerTablas(true);
+    }
     const Conect = async (origin) => {
         if (origin === 1) {
             const res = await Axios.post('http://localhost:4000/conectarbd?origin=1', { BDS: BD1 });
@@ -52,7 +68,7 @@ export default function Form() {
             for (let valor of data) {
                 t.push(valor.table_name)
             }
-            return setEstado({ ...estado, tablas: t, BD1: true });
+            return setEstado({ ...estado, BD1: true });
         }
         if (origin === 2) {
             const res = await Axios.post('http://localhost:4000/conectarbd?origin=2', { BDS: BD2 });
@@ -77,13 +93,14 @@ export default function Form() {
         alert(res.data.mensaje)
     }
     const seleccionarTablas = (e) => {
-        if(e === 'all'){ 
+        if(e === 'allActualizar'){ 
+            console.log("entraaa")
             if(selected){
                 setSelected(false);
                 return setTablas([])
             }           
             setSelected(true);
-            return setTablas(estado.tablas)
+            return setTablas(estado.existentes)
         }
         setSelected(false);
         setTablas(e)
@@ -154,31 +171,7 @@ export default function Form() {
                         onPress={() => Conect(1)}>{estado.BD1 === false ? 'Conexion fallida' : estado.BD1 === true ? 'Conectado' : 'Conectar'}</Button>
                 </Grid>
             </Grid.Container>
-
-            {
-                estado.BD1 === true ?
-                    <Container fluid css={{ height: "30vh", overflow: "auto" }}>
-                        <Text h1>Tablas</Text>
-                        <Checkbox value="all" isSelected={selected} color="primary" onChange={()=>seleccionarTablas('all')}>Seleccionar todas</Checkbox>
-                        <Checkbox.Group
-                            color="success"
-                            label="Selecionar tablas"
-                            value={tablas}
-                            css={{ padding: "$1" }}
-                            onChange={seleccionarTablas}
-                        >
-                            {
-                                estado.tablas.map((t) => {
-                                    return (
-                                        <Checkbox value={t}>{t}</Checkbox>
-                                    )
-                                })
-                            }
-                        </Checkbox.Group>
-                    </Container>
-                    : ""
-            }
-
+           
             <Grid.Container css={{ height: "50vh", width: "100vw" }}>
 
                 <Grid xs={12} sm={12} md={12} lg={12} justify="center" ><Text h1>BD 2</Text></Grid>
@@ -254,7 +247,63 @@ export default function Form() {
                         Sincronizar
                     </Button>
                 </Grid>
+                <Grid justify='center' direction='column' xs={12} sm={6} md={6} lg={6} xl={6}>
+                {
+                estado.BD1 && estado.BD2 && verTablasEstado ?
+                <>
+                        <Text h1>Actualizar tablas</Text>
+                <Container fluid css={{ height: "30vh", overflow: "auto" }}>
+                        <Checkbox value="allActualizar" isSelected={selected} color="primary" onChange={()=>seleccionarTablas('allActualizar')}>Seleccionar todas</Checkbox>
+                        <Checkbox.Group
+                            color="success"
+                            label="Selecionar tablas"
+                            value={tablas}
+                            css={{ padding: "$1" }}
+                            onChange={seleccionarTablas}
+                            >
+                            {
+                                estado.existentes.map((t) => {
+                                    return (
+                                        <Checkbox value={t}>{t}</Checkbox>
+                                        )
+                                    })
+                                }
+                        </Checkbox.Group>
+                    </Container>
+                                </>
+                    : ""
+            }
+                </Grid>
+                <Grid justify='center' direction='column' xs={12} sm={6} md={6} lg={6} xl={6}>
+                {
+                estado.BD1 && estado.BD2 && verTablasEstado ?
+                <>
+                        <Text h1>Añadir Tablas</Text>
+                <Container fluid css={{ height: "30vh", overflow: "auto" }}>
+                        {/* <Checkbox value="all" isSelected={selected} color="primary" onChange={()=>seleccionarTablas('all')}>Seleccionar todas</Checkbox> */}
+                        <Checkbox.Group
+                            color="success"
+                            label="Selecionar tablas"
+                            value={tablas}
+                            css={{ padding: "$1" }}
+                            onChange={seleccionarTablas}
+                            >
+                            {
+                                estado.noExistentes.map((t) => {
+                                    return (
+                                        <Checkbox value={t}>{t}</Checkbox>
+                                        )
+                                    })
+                                }
+                        </Checkbox.Group>
+                    </Container>
+                                </>
+                    : ""
+            }
+                    
+                </Grid>
             </Grid.Container>
+        
             <Spacer x={15} />
         </>
     )
