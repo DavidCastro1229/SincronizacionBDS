@@ -2,26 +2,11 @@ const BD = require('./database');
 
 const Conectar = async (req, res) => {
   const { BDS } = req.body;
-  const { origin } = req.query;
   console.log(req.body)
   try {
     const DataBase = new BD(BDS.host, BDS.user, BDS.bd, BDS.port, BDS.password);
-    if (origin == 1) {
-      const tablas = await DataBase.conection.query(`
-      SELECT table_name
-  FROM information_schema.tables
-  WHERE table_schema='public'
-  AND table_type='BASE TABLE';
-      `)
-      console.log(tablas.rows);
-      return res.json({ access: true, tablasBd: tablas.rows })
-    }
-    await DataBase.conection.query(`
-      SELECT table_name
-  FROM information_schema.tables
-  WHERE table_schema='public'
-  AND table_type='BASE TABLE';
-      `)
+    await DataBase.conection.connect();
+
     return res.json({ access: true })
 
   } catch (error) {
@@ -58,9 +43,7 @@ const verTablas = async (req, res) => {
     for (let tabla of response.rows) {
       tablas.push(tabla.table_name)
     }
-    console.log(tablas);
     const Existencia = await this.DataBaseDos.tablasExistentes(tablas, tablas.length);
-    console.log(Existencia)
     return res.json({ access: true, table: Existencia })
   } catch (error) {
     console.log(error)
