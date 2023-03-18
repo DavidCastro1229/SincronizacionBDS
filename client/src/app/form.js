@@ -158,6 +158,7 @@ export default function Form() {
             {
                 estado.BD1 === true ?
                     <Container fluid css={{ height: "30vh", overflow: "auto" }}>
+                        <Text h1>Tablas</Text>
                         <Checkbox value="all" isSelected={selected} color="primary" onChange={()=>seleccionarTablas('all')}>Seleccionar todas</Checkbox>
                         <Checkbox.Group
                             color="success"
