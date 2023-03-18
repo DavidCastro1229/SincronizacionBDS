@@ -17,29 +17,29 @@ class BD {
         })
     }
 
-    async tablasExistentes(tablas, longitud){
+    async tablasExistentes(tablas, longitud) {
         let long = 0;
         let tablasExistentes = []
         let tablasNoExistentes = []
-        for(let name of tablas){
-            long = long +1
+        for (let name of tablas) {
+            long = long + 1
             const validarExistencia = await this.conection.query(`
             SELECT table_name FROM information_schema.columns 
             WHERE table_name = '${name}' 
         `);
-        if(validarExistencia.rowCount > 0) tablasExistentes.push(name);
-        if(validarExistencia.rowCount === 0) tablasNoExistentes.push(name);
-        if(long === longitud) return {existentes: tablasExistentes, noExistentes:tablasNoExistentes }
-          }
+            if (validarExistencia.rowCount > 0) tablasExistentes.push(name);
+            if (validarExistencia.rowCount === 0) tablasNoExistentes.push(name);
+            if (long === longitud) return { existentes: tablasExistentes, noExistentes: tablasNoExistentes }
+        }
     }
 
-    async crearTabla(tablas, longitud, conexionBD1, bd, user, password ) {
+    async crearTabla(tablas, longitud, conexionBD1, bd, user, password) {
         let long = 0;
         for (let name of tablas) {
             long = long + 1;
-console.log(long)
-        console.log('inicia la tabla', name)
-        const infoTabla = await conexionBD1.conection.query(`
+            console.log(long)
+            console.log('inicia la tabla', name)
+            const infoTabla = await conexionBD1.conection.query(`
       SELECT DISTINCT 
       a.attnum as no,
       a.attname as nombre_columna,
@@ -62,37 +62,34 @@ console.log(long)
   ORDER BY a.attnum;
       `);
 
-        const datos = []
-        if (infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna) {
-          infoTabla.rows.shift()
-        }
-        infoTabla.rows.forEach((data) => {
-          datos.push(`${data.nombre_columna} ${data.tipo}`)
-        })
-        const columns = datos.toString();
-        await this.conection.query(`
+            const datos = []
+            if (infoTabla.rowCount > 1) {
+                if (infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna) {
+                    infoTabla.rows.shift()
+                }
+            }
+            infoTabla.rows.forEach((data) => {
+                datos.push(`"${data.nombre_columna}" ${data.tipo}`)
+            })
+            const columns = datos.toString();
+            await this.conection.query(`
         CREATE TABLE "${name}"
         AS select * from dblink('dbname=${bd} user=${user} password=${password}',
         'select * from "${name}"')					 
         as "${name}" (${columns})     
         `);
-        console.log('se cero la tabla', name)
-        if(long === longitud) return true
+            console.log('se cero la tabla', name)
+            if (long === longitud) return true
 
+        }
     }
-
-
-
-
-    
-    }
-    async actualizarTabla(tablas, longitud, conexionBD1, bd, user, password ) {
+    async actualizarTabla(tablas, longitud, conexionBD1, bd, user, password) {
         let long = 0;
         for (let name of tablas) {
             long = long + 1;
-console.log(long)
-        console.log('inicia la tabla', name)
-        const infoTabla = await conexionBD1.conection.query(`
+            console.log(long)
+            console.log('inicia la tabla', name)
+            const infoTabla = await conexionBD1.conection.query(`
       SELECT DISTINCT 
       a.attnum as no,
       a.attname as nombre_columna,
@@ -115,49 +112,45 @@ console.log(long)
   ORDER BY a.attnum;
       `);
 
-        const datos = []
-        if (infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna) {
-          infoTabla.rows.shift()
-        }
-        infoTabla.rows.forEach((data) => {
-          datos.push(`${data.nombre_columna} ${data.tipo}`)
-        })
-        const columns = datos.toString();
-        await this.conection.query(`
-        drop table "${name}";
+            const datos = []
+            if (infoTabla.rowCount > 1) {
+                console.log('entra')
+                if (infoTabla.rows[0].nombre_columna === infoTabla.rows[1].nombre_columna) {
+                    infoTabla.rows.shift()
+                }
+            }
+            infoTabla.rows.forEach((data) => {
+                datos.push(`"${data.nombre_columna}" ${data.tipo}`)
+            })
+            const columns = datos.toString();
+            await this.conection.query(`
+        drop table "${name}" CASCADE;
         CREATE TABLE "${name}"
         AS select * from dblink('dbname=${bd} user=${user} password=${password}',
         'select * from "${name}"')					 
         as "${name}" (${columns})
         
         `);
+            console.log('se actualizo la tabla', name)
+            if (long === longitud) return true
 
-        console.log('se actualizo la tabla', name)
-        if(long === longitud) return true
+        }
 
-    }
-
-
-
-
-    
     }
     async agregarForanea(tablas, llaves, logitud) {
         let long = 0;
-        console.log(logitud)
-
-        for(let name of tablas ){
+        for (let name of tablas) {
             for (let e of llaves) {
                 if (name === e.tabla) {
                     long = long + 1;
                     console.log(long)
-                    console.log(e.tabla)
+                    console.log("inicia la tabla", e.tabla)
                     await this.conection.query(`
                   ALTER TABLE "${name}" 
              ADD CONSTRAINT ${e.llave} 
-             FOREIGN KEY (${e.nombre_columna}) REFERENCES "${e.referencia_table}"(${e.referencia_columna})
+             FOREIGN KEY ("${e.nombre_columna}") REFERENCES "${e.referencia_table}"("${e.referencia_columna}")
                   `)
-                    console.log('Exito, foranea agregada a la tabla ,', name)
+                    console.log('Exito, foranea agregada a la tabla', name)
                 }
             }
         }
@@ -165,25 +158,25 @@ console.log(long)
     }
     async eliminarForaneas(tablas, llaves, logitud) {
         let long = 0;
-        for(let name of tablas){
-        for (let e of llaves) {
-            if (name === e.tabla) {
-                long = long + 1;
-                console.log(long)
-                await this.conection.query(`
+        for (let name of tablas) {
+            for (let e of llaves) {
+                if (name === e.tabla) {
+                    long = long + 1;
+                    console.log(long)
+                    await this.conection.query(`
         ALTER TABLE "${name}" DROP CONSTRAINT ${e.llave};
               `)
-                console.log('se elimino foranea de la tabla', name)
+                    console.log('se elimino foranea de la tabla', name)
+                }
             }
         }
-    }
         if (long === logitud) return true
     }
 
-    async agregarPrimaryKey(tablas,conexionBD1) {
+    async agregarPrimaryKey(tablas, conexionBD1) {
         let long = 0;
-      
-        for(let name of tablas){
+
+        for (let name of tablas) {
             const infoTabla = await conexionBD1.conection.query(`
             SELECT DISTINCT 
             a.attnum as no,
@@ -206,18 +199,18 @@ console.log(long)
          AND pgc.relname = '${name}'  -- Nombre de la tabla
         ORDER BY a.attnum;
             `);
-
             long = long + 1;
             console.log(long)
-        for (let e of infoTabla.rows) {
-            if (e.llave_primaria === true) {
-                console.log(e.nombre_columna);
-                await this.conection.query(`
-                alter table "${name}" add primary key (${e.nombre_columna})`);
-                console.log('se agrega llave primaria a la tabla', name)
+            console.log("inicia la tabla", name)
+            for (let e of infoTabla.rows) {
+                if (e.llave_primaria === true) {
+                    console.log(e.nombre_columna);
+                    await this.conection.query(`
+                alter table "${name}" add primary key ("${e.nombre_columna}")`);
+                    console.log('se agrega llave primaria a la tabla', name)
+                }
             }
         }
-    }
 
         if (long === tablas.lenght) return true
     }
