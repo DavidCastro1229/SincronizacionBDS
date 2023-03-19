@@ -15,6 +15,69 @@ class BD {
             port: PORT,
             password: PASSWORD
         })
+
+    }
+
+    async comparacion(tablas, vistas, indices) {
+        //tablas
+        const response1 = await this.conection.query(`
+    SELECT table_name
+   FROM information_schema.tables 
+   WHERE table_schema='public'
+   AND table_type='BASE TABLE';  
+    `)
+        //vistas
+        const response2 = await this.conection.query(`
+    SELECT table_name
+    FROM information_schema.views
+    WHERE table_schema NOT IN ('pg_catalog', 'information_schema');
+    `)
+
+        //indices
+        const response3 = await this.conection.query(`
+    SELECT indexname
+    FROM pg_indexes
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+    `)
+        let tablasExistentes = []
+        let tablasNoExistentes = []
+        let vistasExistentes = []
+        let vistasNoExistentes = []
+        let indicesExistentes = []
+        let indicesNoExistentes = []
+
+        console.log(response1.rows)
+        for (let tabla of tablas) {
+            if (response1.rows.find(e => e.table_name === tabla)) {
+                console.log('entra en tablas')
+                tablasExistentes.push(tabla)
+            } else {
+                tablasNoExistentes.push(tabla)
+            }
+        }
+        for (let vista of vistas) {
+            
+            if (response2.rows.find(e => e.table_name === vista)) {
+                console.log('entra en vista')
+                vistasExistentes.push(vista)
+            } else {
+                vistasNoExistentes.push(vista)
+            }
+        }
+        for (let indice of vistas) {
+            
+            if (response3.rows.find(e => e.indexname === indice)) {
+                console.log('entra en indice')
+                indicesExistentes.push(indice)
+            } else {
+                indicesNoExistentes.push(indice)
+            }
+        }
+        return {
+            tablasExistentes, tablasNoExistentes,
+            vistasExistentes, vistasNoExistentes,
+            indicesExistentes, indicesNoExistentes
+        }
     }
 
     async tablasExistentes(tablas, longitud) {
@@ -33,7 +96,7 @@ class BD {
         }
     }
 
-    async crearTabla(tablas, longitud, conexionBD1, bd, user, password) {
+    async crearTabla(tablas, longitud, conexionBD1, bd, port, host, user, password) {
         let long = 0;
         for (let name of tablas) {
             long = long + 1;
@@ -74,7 +137,7 @@ class BD {
             const columns = datos.toString();
             await this.conection.query(`
         CREATE TABLE "${name}"
-        AS select * from dblink('dbname=${bd} user=${user} password=${password}',
+        AS select * from dblink('dbname=${bd} port=${port} host=${host} user=${user} password=${password}',
         'select * from "${name}"')					 
         as "${name}" (${columns})     
         `);
@@ -83,7 +146,7 @@ class BD {
 
         }
     }
-    async actualizarTabla(tablas, longitud, conexionBD1, bd, user, password) {
+    async actualizarTabla(tablas, longitud, conexionBD1, bd, port, host, user, password) {
         let long = 0;
         for (let name of tablas) {
             long = long + 1;
@@ -126,7 +189,7 @@ class BD {
             await this.conection.query(`
         drop table "${name}" CASCADE;
         CREATE TABLE "${name}"
-        AS select * from dblink('dbname=${bd} user=${user} password=${password}',
+        AS select * from dblink('dbname=${bd} port=${port} host=${host} user=${user} password=${password}',
         'select * from "${name}"')					 
         as "${name}" (${columns})
         

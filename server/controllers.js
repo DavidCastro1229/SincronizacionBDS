@@ -27,24 +27,45 @@ const crearExtencion = async (req, res) => {
     res.json({ access: false, mensaje: error.message })
   }
 }
-const verTablas = async (req, res) => {
+const comparacion = async (req, res) => {
   try {
     const { BD1, BD2 } = req.body;
     this.DataBaseUno = new BD(BD1.host, BD1.user, BD1.bd, BD1.port, BD1.password);
     this.DataBaseDos = new BD(BD2.host, BD2.user, BD2.bd, BD2.port, BD2.password);
-
-    const response = await this.DataBaseUno.conection.query(`
+    //tablas
+    const response1 = await this.DataBaseUno.conection.query(`
     SELECT table_name
    FROM information_schema.tables 
    WHERE table_schema='public'
    AND table_type='BASE TABLE';  
     `)
+    //vistas
+    const response2 = await this.DataBaseUno.conection.query(`
+    SELECT table_name
+    FROM information_schema.views
+    WHERE table_schema NOT IN ('pg_catalog', 'information_schema');
+    `)
+    //indices
+    const response3 = await this.DataBaseUno.conection.query(`
+    SELECT indexname
+    FROM pg_indexes
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+    `)
+
     let tablas = []
-    for (let tabla of response.rows) {
+    let vistas = []
+    let indices = []
+    for (let tabla of response1.rows) {
       tablas.push(tabla.table_name)
     }
-    const Existencia = await this.DataBaseDos.tablasExistentes(tablas, tablas.length);
-    return res.json({ access: true, table: Existencia })
+    for (let vista of response2.rows) {
+      vistas.push(vista.table_name)
+    }
+    for (let indice of response3.rows) {
+      indices.push(indice.indexname)
+    }
+    const Existencia = await this.DataBaseDos.comparacion(tablas,vistas, indices);
+    return res.json({ access: true, comparacion: Existencia })
   } catch (error) {
     console.log(error)
     return res.json({ access: false, mensaje: error.message })
@@ -153,7 +174,7 @@ const Sincronizar = async (req, res) => {
 
     if (Existencia.noExistentes.length > 0) {
       const crear = await this.DataBaseDos.crearTabla(Existencia.noExistentes, Existencia.noExistentes.length,
-        this.DataBaseUno, BD1.bd, BD1.user, BD1.password);
+        this.DataBaseUno, BD1.bd, BD1.port, BD1.host, BD1.user, BD1.password);
       console.log(crear);
 
       const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(Existencia.noExistentes, this.DataBaseUno);
@@ -169,7 +190,7 @@ const Sincronizar = async (req, res) => {
       // console.log("eliminar foraneas", eliminarForaneas)
 
       const actualizar = await this.DataBaseDos.actualizarTabla(Existencia.existentes, Existencia.existentes.length,
-        this.DataBaseUno, BD1.bd, BD1.user, BD1.password);
+        this.DataBaseUno, BD1.bd, BD1.port, BD1.host, BD1.user, BD1.password);
       console.log(actualizar);
 
       const agregarPrimaryKey = await this.DataBaseDos.agregarPrimaryKey(Existencia.existentes, this.DataBaseUno);
@@ -186,4 +207,4 @@ const Sincronizar = async (req, res) => {
   }
 }
 
-module.exports = { Conectar, crearExtencion, Sincronizar, verTablas };
+module.exports = { Conectar, crearExtencion, Sincronizar, comparacion };
