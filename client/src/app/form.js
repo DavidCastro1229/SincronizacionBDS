@@ -3,18 +3,18 @@ import Axios from "axios";
 import { Input, Grid, Text, Button, Spacer, Table, Checkbox, Container } from '@nextui-org/react'
 export default function Form() {
     const [BD1, setBD1] = React.useState({
-        host: undefined,
-        port: undefined,
-        bd: undefined,
-        user: undefined,
-        password: undefined,
+        host: 'localhost',
+        port: '5432',
+        bd: 'pop_prod',
+        user: 'postgres',
+        password: 'Xara0325',
     })
     const [BD2, setBD2] = React.useState({
-        host: undefined,
-        port: undefined,
-        bd: undefined,
-        user: undefined,
-        password: undefined,
+        host: 'localhost',
+        port: '5432',
+        bd: 'pop_prod_tarifas',
+        user: 'postgres',
+        password: 'Xara0325',
     })
     const [estado, setEstado] = React.useState({
         BD1: null,
@@ -33,8 +33,8 @@ export default function Form() {
         setBD2({ ...BD2, [name]: e.target.value })
     }
     const [selected, setSelected] = React.useState({
-        actualizar:false,
-        agregar:false
+        actualizar: false,
+        agregar: false
     })
     React.useEffect(() => {
         setEstado({ ...estado, BD1: null })
@@ -43,14 +43,10 @@ export default function Form() {
     React.useEffect(() => {
         setEstado({ ...estado, BD2: null })
     }, [BD2])
-    React.useEffect(() => {
-        if (estado.BD1 === true && estado.BD2 === true) {
-            verTablas()
-        }
-    }, [estado.BD1, estado.BD2])
 
-    async function verTablas() {
-        const res = await Axios.post('http://localhost:4000/verTablas', { BD1, BD2 });
+    const comparacion = async ()=> {
+        const res = await Axios.post('http://localhost:4000/comparacion', { BD1, BD2 });
+        return console.log(res.data);
         console.log(res.data)
         if (res.data.access === false) return alert(res.data.mensaje)
         console.log(res.data.table.existentes);
@@ -92,19 +88,19 @@ export default function Form() {
         if (e === 'allActualizar') {
             console.log("entraaa")
             if (selected.actualizar) {
-                setSelected({...selected, actualizar:false});
+                setSelected({ ...selected, actualizar: false });
                 return setTablas([])
             }
-            setSelected({...selected, actualizar:true});
+            setSelected({ ...selected, actualizar: true });
             return setTablas(estado.existentes)
         }
         if (e === 'allAgregar') {
             console.log("entraaa")
             if (selected.agregar) {
-                setSelected({...selected, agregar:false});
+                setSelected({ ...selected, agregar: false });
                 return setTablas([])
             }
-            setSelected({...selected, agregar:true});
+            setSelected({ ...selected, agregar: true });
             return setTablas(estado.noExistentes)
         }
         setSelected(false);
@@ -112,7 +108,7 @@ export default function Form() {
         setTablas(e)
 
     }
-    
+
     return (
         <>
             <Grid.Container css={{ height: "50vh", width: "100vw" }}>
@@ -304,6 +300,13 @@ export default function Form() {
                     </Button>
                 </Grid>
                 <Spacer x={15} />
+
+                <Grid justify='center' xs={12} sm={12} md={12} lg={12} xl={12}>
+                    <Button flat disabled={estado.BD1 && estado.BD2 === false ? true : estado.BD1 && estado.BD2 === true ? false : true} color="warning"
+                        onPress={comparacion} >
+                        comparacion
+                    </Button>
+                </Grid>
                 <Grid justify='center' xs={12} sm={12} md={12} lg={12} xl={12}>
                     <Button flat disabled={estado.BD1 && estado.BD2 === false ? true : estado.BD1 && estado.BD2 === true ? false : true} color="primary"
                         onPress={Sincronizar} >
