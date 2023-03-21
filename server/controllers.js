@@ -64,7 +64,7 @@ const comparacion = async (req, res) => {
     for (let indice of response3.rows) {
       indices.push(indice.indexname)
     }
-    const Existencia = await this.DataBaseDos.comparacion(tablas,vistas, indices);
+    const Existencia = await this.DataBaseDos.comparacion(tablas, vistas, indices);
     return res.json({ access: true, comparacion: Existencia })
   } catch (error) {
     console.log(error)
@@ -73,7 +73,14 @@ const comparacion = async (req, res) => {
 }
 const Sincronizar = async (req, res) => {
   try {
-    const { BD1, BD2, tablas } = req.body;
+    const { BD1, BD2, tablasSelecionadas } = req.body;
+    let tablas = []
+    for (let valor of tablasSelecionadas.actualizar) {
+      tablas.push(valor)
+    }
+    for (let valor of tablasSelecionadas.agregar) {
+      tablas.push(valor)
+    }
     this.DataBaseUno = new BD(BD1.host, BD1.user, BD1.bd, BD1.port, BD1.password);
     this.DataBaseDos = new BD(BD2.host, BD2.user, BD2.bd, BD2.port, BD2.password);
 

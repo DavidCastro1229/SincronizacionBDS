@@ -49,7 +49,6 @@ class BD {
         console.log(response1.rows)
         for (let tabla of tablas) {
             if (response1.rows.find(e => e.table_name === tabla)) {
-                console.log('entra en tablas')
                 tablasExistentes.push(tabla)
             } else {
                 tablasNoExistentes.push(tabla)
@@ -58,7 +57,6 @@ class BD {
         for (let vista of vistas) {
             
             if (response2.rows.find(e => e.table_name === vista)) {
-                console.log('entra en vista')
                 vistasExistentes.push(vista)
             } else {
                 vistasNoExistentes.push(vista)
@@ -67,7 +65,6 @@ class BD {
         for (let indice of vistas) {
             
             if (response3.rows.find(e => e.indexname === indice)) {
-                console.log('entra en indice')
                 indicesExistentes.push(indice)
             } else {
                 indicesNoExistentes.push(indice)
