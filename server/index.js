@@ -3,11 +3,10 @@ const cors=require('cors');
 const rutas=require('./rutas');
 const path= require("path");
 const app =  express();
+const root = path.join(__dirname, '../client/build/index.html')
 app.use(cors());
 app.use(express.json());
 app.use(rutas);
-app.use(rutas);
-const root = path.join(__dirname, '../client/build/index.html')
 app.use(express.static(root));
 console.log("ruta",root)
 app.get("*", (req, res)=>{
