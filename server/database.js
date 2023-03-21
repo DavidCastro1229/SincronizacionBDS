@@ -1,5 +1,5 @@
 
-const { Pool } = require('pg');
+const { Pool } = require('pg/lib');
 
 class BD {
     constructor(HOST, USER, DATABASE, PORT, PASSWORD) {
