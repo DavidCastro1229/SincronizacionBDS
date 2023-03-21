@@ -332,34 +332,6 @@ export default function Form() {
                         {estado.BD2 === false ? 'Conexion fallida' : estado.BD2 === true ? 'Conectado' : 'Conectar'}
                     </Button>
                 </Grid>
-                {/* <Grid justify='center' direction='column' xs={12} sm={6} md={6} lg={6} xl={6}>
-                    {
-                        estado.BD1 && estado.BD2 && verTablasEstado ?
-                            <>
-                                <Text h1>Actualizar tablas</Text>
-                                <Container fluid css={{ height: "30vh", overflow: "auto" }}>
-                                    <Checkbox value="allActualizar" isSelected={selected.actualizar} color="primary" onChange={() => seleccionarTablas('allActualizar')}>Seleccionar todas</Checkbox>
-                                    <Checkbox.Group
-                                        color="success"
-                                        label="Selecionar tablas"
-                                        value={tablas}
-                                        css={{ padding: "$1" }}
-                                        onChange={seleccionarTablas}
-                                    >
-                                        {
-                                            estado.existentes.map((t) => {
-                                                return (
-                                                    <Checkbox value={t}>{t}</Checkbox>
-                                                )
-                                            })
-                                        }
-                                    </Checkbox.Group>
-                                </Container>
-                            </>
-                            : ""
-                    }
-                </Grid> */}
-
                 <Grid justify='center' xs={12} sm={12} md={12} lg={12} xl={12}>
                     <Button flat size="xs" disabled={estado.BD1 && estado.BD2 === false ? true : estado.BD1 && estado.BD2 === true ? false : true} color="primary" onPress={Extencion} >
                         Crear Extencion
@@ -374,7 +346,7 @@ export default function Form() {
                     </Button>
                 </Grid>
                 <Grid justify='center' xs={12} sm={12} md={12} lg={12} xl={12}>
-                <Button flat disabled={estado.BD1 && estado.BD2 === false ? true : estado.BD1 && estado.BD2 === true ? false : true} color="primary"
+                <Button flat disabled={estado.BD1 && estado.BD2 && estadoComparacion === false ? true : estado.BD1 && estado.BD2 === true ? false : true} color="primary"
                         onPress={Sincronizar} >
                         Sincronizar
                     </Button>
@@ -395,7 +367,7 @@ export default function Form() {
 
             <Grid.Container css={{width:"100vw"}}>
                 <Grid justify='center' xs={12} ms={6} md={6} lg={6} xl={6}>
-                    <Collapse.Group splitted>
+                    <Collapse.Group splitted css={{width:"100%"}}>
                         <Collapse title="Actualizar Tablas">
                             {
                                 estadoComparacion ?
@@ -553,7 +525,7 @@ export default function Form() {
                     </Collapse.Group>
                 </Grid>
                 <Grid justify='center' xs={12} ms={6} md={6} lg={6} xl={6}>
-                    <Collapse.Group splitted>
+                    <Collapse.Group splitted css={{width:"100%"}}>
                             <Collapse title="Agregar Vistas">
                                 {
                                     estadoComparacion ?
